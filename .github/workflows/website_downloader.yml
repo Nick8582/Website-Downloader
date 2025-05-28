@@ -32,7 +32,7 @@ jobs:
           python website_downloader.py "${{ github.event.inputs.url }}" "${{ github.event.inputs.output_folder }}"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: downloaded-website
           path: ${{ github.event.inputs.output_folder }}
