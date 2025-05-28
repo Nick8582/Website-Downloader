@@ -4,6 +4,7 @@ from urllib.parse import urlparse, urljoin
 from bs4 import BeautifulSoup
 import hashlib
 import re
+import argparse
 
 def download_site(url, output_folder="downloaded_site"):
     assets_folder = os.path.join(output_folder, "static")
