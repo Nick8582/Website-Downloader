@@ -1,0 +1,40 @@
+name: 'Website Downloader'
+description: 'Скачивание веб-сайта со всеми ресурсами'
+author: 'Nick8582'
+
+inputs:
+  url:
+    description: 'URL сайта для скачивания'
+    required: true
+  output_folder:
+    description: 'Папка для сохранения (по умолчанию downloaded_site)'
+    required: false
+    default: 'downloaded_site'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests beautifulsoup4
+      shell: bash
+
+    - name: Run downloader
+      run: |
+        python website_downloader.py "${{ inputs.url }}" --output "${{ inputs.output_folder }}"
+      shell: bash
+
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: downloaded-website
+        path: ${{ inputs.output_folder }}
