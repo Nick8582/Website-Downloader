@@ -74,12 +74,7 @@ class WebsiteDownloaderApp:
             width=50,
             font=('Helvetica', 10)
         )
-        self.url_entry.grid(
-            row=1, 
-            column=0, 
-            columnspan=2, 
-            sticky=tk.EW, 
-            padx=(0, 5)
+        self.url_entry.grid(row=0, column=1, padx=5, pady=5)
         
         folder_label = ttk.Label(input_frame, text="Save Folder:")
         folder_label.grid(row=2, column=0, sticky=tk.W, pady=(10, 5))
