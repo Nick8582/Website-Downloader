@@ -1,13 +1,13 @@
-name: Website Downloader
+name: Скачивание сайта
 
 on:
   workflow_dispatch:
     inputs:
       url:
-        description: 'URL of the website to download'
+        description: 'URL сайта для скачивания'
         required: true
       output_folder:
-        description: 'Output folder name (default: downloaded_site)'
+        description: 'Имя папки для сохранения (по умолчанию downloaded_site)'
         required: false
         default: 'downloaded_site'
 
@@ -17,22 +17,22 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Установка Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Установка зависимостей
         run: |
           python -m pip install --upgrade pip
           pip install requests beautifulsoup4
 
-      - name: Run website downloader
+      - name: Запуск скачивания
         run: |
-          python website_downloader.py "${{ github.event.inputs.url }}" "${{ github.event.inputs.output_folder }}"
+          python website_downloader.py "${{ inputs.url }}" --output "${{ inputs.output_folder }}"
 
-      - name: Upload artifacts
+      - name: Загрузка результатов
         uses: actions/upload-artifact@v4
         with:
-          name: downloaded-website
-          path: ${{ github.event.inputs.output_folder }}
+          name: скачанный-сайт
+          path: ${{ inputs.output_folder }}

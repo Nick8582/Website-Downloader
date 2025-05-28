@@ -136,10 +136,13 @@ def download_site(url, output_folder="downloaded_site"):
     print(f"Ресурсы: {assets_folder}")
 
 if __name__ == "__main__":
-    input_url = input("Введите URL сайта: ").strip()
-    folder_name = input("Введите имя папки для сохранения (по умолчанию 'downloaded_site'): ").strip()
+    parser = argparse.ArgumentParser(description='Скачивание веб-сайта')
+    parser.add_argument('url', help='URL сайта для скачивания')
+    parser.add_argument('--output', default='downloaded_site', 
+                       help='Папка для сохранения (по умолчанию: downloaded_site)')
+    args = parser.parse_args()
     
-    if not input_url:
-        print("⚠️ Не указана ссылка.")
+    if not args.url:
+        print("⚠️ Необходимо указать URL")
     else:
-        download_site(input_url, folder_name if folder_name else "downloaded_site")
+        download_site(args.url, args.output)
