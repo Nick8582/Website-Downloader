@@ -1,20 +1,32 @@
 name: 'Website Downloader'
-description: 'Скачивание веб-сайта со всеми ресурсами'
+description: 'Download a website with all resources (HTML, CSS, JS, images)'
 author: 'Nick8582'
 
 inputs:
   url:
-    description: 'URL сайта для скачивания'
+    description: 'URL of the website to download'
     required: true
   output_folder:
-    description: 'Папка для сохранения (по умолчанию downloaded_site)'
+    description: 'Output directory (default: downloaded_site)'
     required: false
     default: 'downloaded_site'
+  depth:
+    description: 'Crawl depth (default: 1)'
+    required: false
+    default: '1'
+  ignore_ssl:
+    description: 'Ignore SSL certificate verification'
+    required: false
+    default: 'false'
+  user_agent:
+    description: 'Custom user agent string'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
   steps:
-    - name: Checkout
+    - name: Checkout repository
       uses: actions/checkout@v4
 
     - name: Set up Python
@@ -28,9 +40,13 @@ runs:
         pip install requests beautifulsoup4
       shell: bash
 
-    - name: Run downloader
+    - name: Run website downloader
       run: |
-        python website_downloader.py "${{ inputs.url }}" --output "${{ inputs.output_folder }}"
+        python website_downloader.py "${{ inputs.url }}" \
+          --output "${{ inputs.output_folder }}" \
+          --depth "${{ inputs.depth }}" \
+          ${{ inputs.ignore_ssl == 'true' && '--ignore-ssl' || '' }} \
+          ${{ inputs.user_agent && format('--user-agent \"{0}\"', inputs.user_agent) || '' }}
       shell: bash
 
     - name: Upload artifacts

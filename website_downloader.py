@@ -5,20 +5,45 @@ from bs4 import BeautifulSoup
 import hashlib
 import re
 import argparse
+import ssl
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
-def download_site(url, output_folder="downloaded_site"):
+def download_site(url, output_folder="downloaded_site", depth=1, ignore_ssl=False, user_agent=None):
+    """
+    Download a website with all its resources.
+    
+    Args:
+        url: Website URL to download
+        output_folder: Output directory name
+        depth: How many levels deep to crawl (not fully implemented in this version)
+        ignore_ssl: Whether to ignore SSL certificate verification
+        user_agent: Custom user agent string
+    """
     assets_folder = os.path.join(output_folder, "static")
     os.makedirs(assets_folder, exist_ok=True)
 
-    print(f"🔽 Скачиваю HTML с {url}")
-    headers = {"User-Agent": "Mozilla/5.0"}
+    print(f"🔽 Downloading HTML from {url}")
+    
+    session = requests.Session()
+    retries = Retry(total=3, backoff_factor=1)
+    session.mount('http://', HTTPAdapter(max_retries=retries))
+    session.mount('https://', HTTPAdapter(max_retries=retries))
+    
+    headers = {"User-Agent": user_agent or "Mozilla/5.0"}
+    verify_ssl = not ignore_ssl
+    
     try:
-        response = requests.get(url, headers=headers, timeout=15)
+        if ignore_ssl:
+            requests.packages.urllib3.disable_warnings()
+            ssl._create_default_https_context = ssl._create_unverified_context
+
+        response = session.get(url, headers=headers, timeout=15, verify=verify_ssl)
         response.raise_for_status()
         response.encoding = response.apparent_encoding
         html = response.text
     except Exception as e:
-        print(f"❌ Ошибка при загрузке HTML: {e}")
+        print(f"❌ Error downloading HTML: {e}")
         return
 
     original_path = os.path.join(output_folder, "original_index.html")
@@ -38,7 +63,7 @@ def download_site(url, output_folder="downloaded_site"):
             urls.add(urljoin(url, href))
             if href.endswith('.css'):
                 try:
-                    css_response = requests.get(urljoin(url, href), headers=headers)
+                    css_response = session.get(urljoin(url, href), headers=headers, verify=verify_ssl)
                     css_response.raise_for_status()
                     css_content = css_response.text
                     font_urls = re.findall(r'url\(([^)]+)\)', css_content)
@@ -49,7 +74,7 @@ def download_site(url, output_folder="downloaded_site"):
                         else:
                             urls.add(urljoin(urljoin(url, href), font_url))
                 except Exception as e:
-                    print(f" ❌ Ошибка при обработке CSS {href}: {e}")
+                    print(f" ❌ Error processing CSS {href}: {e}")
         elif tag.name == 'script' and tag.get('src'):
             urls.add(urljoin(url, tag['src']))
         elif tag.name == 'source' and tag.get('src'):
@@ -68,7 +93,7 @@ def download_site(url, output_folder="downloaded_site"):
     other_resources = [u for u in urls if not u.lower().endswith(font_extensions)]
     font_urls = [u for u in urls if u.lower().endswith(font_extensions)]
 
-    print(f"🔍 Найдено {len(urls)} ресурсов (включая {len(font_urls)} шрифтов)")
+    print(f"🔍 Found {len(urls)} resources (including {len(font_urls)} fonts)")
 
     url_to_local = {}
     
@@ -90,15 +115,15 @@ def download_site(url, output_folder="downloaded_site"):
             local_path = os.path.join(assets_folder, filename)
             
             if not os.path.exists(local_path):
-                print(f" → Скачиваю: {res_url}")
-                r = requests.get(res_url, timeout=15, headers=headers)
+                print(f" → Downloading: {res_url}")
+                r = session.get(res_url, timeout=15, headers=headers, verify=verify_ssl)
                 r.raise_for_status()
                 with open(local_path, "wb") as f:
                     f.write(r.content)
             
             return f"static/{filename}"
         except Exception as e:
-            print(f" ❌ Ошибка при обработке {res_url}: {e}")
+            print(f" ❌ Error processing {res_url}: {e}")
             return None
 
     for font_url in font_urls:
@@ -132,18 +157,30 @@ def download_site(url, output_folder="downloaded_site"):
     with open(final_path, "w", encoding="utf-8") as f:
         f.write(html)
 
-    print(f"\n✅ Готово! Файлы сохранены в папку: {output_folder}")
-    print(f"Главная страница: {final_path}")
-    print(f"Ресурсы: {assets_folder}")
+    print(f"\n✅ Done! Files saved to: {output_folder}")
+    print(f"Main page: {final_path}")
+    print(f"Resources: {assets_folder}")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Скачивание веб-сайта')
-    parser.add_argument('url', help='URL сайта для скачивания')
-    parser.add_argument('--output', default='downloaded_site', 
-                       help='Папка для сохранения (по умолчанию: downloaded_site)')
+    parser = argparse.ArgumentParser(description='Website Downloader')
+    parser.add_argument('url', help='URL of the website to download')
+    parser.add_argument('-o', '--output', default='downloaded_site', 
+                       help='Output directory (default: downloaded_site)')
+    parser.add_argument('-d', '--depth', type=int, default=1,
+                       help='Crawl depth (default: 1)')
+    parser.add_argument('--ignore-ssl', action='store_true',
+                       help='Ignore SSL certificate verification')
+    parser.add_argument('-u', '--user-agent', 
+                       help='Custom user agent string')
     args = parser.parse_args()
     
     if not args.url:
-        print("⚠️ Необходимо указать URL")
+        print("⚠️ URL is required")
     else:
-        download_site(args.url, args.output)
+        download_site(
+            args.url,
+            output_folder=args.output,
+            depth=args.depth,
+            ignore_ssl=args.ignore_ssl,
+            user_agent=args.user_agent
+        )

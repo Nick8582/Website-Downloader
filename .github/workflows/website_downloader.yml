@@ -1,15 +1,29 @@
-name: Скачивание сайта
+name: Website Downloader
 
 on:
   workflow_dispatch:
     inputs:
       url:
-        description: 'URL сайта для скачивания'
+        description: 'URL of the website to download'
         required: true
       output_folder:
-        description: 'Имя папки для сохранения (по умолчанию downloaded_site)'
+        description: 'Output directory (default: downloaded_site)'
         required: false
         default: 'downloaded_site'
+      depth:
+        description: 'Crawl depth (default: 1)'
+        required: false
+        type: number
+        default: 1
+      ignore_ssl:
+        description: 'Ignore SSL certificate verification'
+        required: false
+        type: boolean
+        default: false
+      user_agent:
+        description: 'Custom user agent string'
+        required: false
+        default: ''
 
 jobs:
   download:
@@ -17,22 +31,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Установка Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
+          cache: 'pip'
+          cache-dependency-path: 'requirements.txt'
 
-      - name: Установка зависимостей
+      - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests beautifulsoup4
+          pip install -r requirements.txt
 
-      - name: Запуск скачивания
+      - name: Run website downloader
         run: |
-          python website_downloader.py "${{ inputs.url }}" --output "${{ inputs.output_folder }}"
+          python website_downloader.py "${{ inputs.url }}" \
+            --output "${{ inputs.output_folder }}" \
+            --depth "${{ inputs.depth }}" \
+            ${{ inputs.ignore_ssl && '--ignore-ssl' || '' }} \
+            ${{ inputs.user_agent && format('--user-agent \"{0}\"', inputs.user_agent) || '' }}
 
-      - name: Загрузка результатов
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: скачанный-сайт
+          name: downloaded-website
           path: ${{ inputs.output_folder }}
+          retention-days: 7
